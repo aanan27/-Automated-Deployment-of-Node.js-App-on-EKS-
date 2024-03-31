@@ -1,7 +1,7 @@
 {
-  "name": "quran-login",
+  "name": "quran-app",
   "version": "1.0.0",
-  "description": "A simple login page for accessing a website related to the Quran",
+  "description": "An application to display a list of Surah",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
