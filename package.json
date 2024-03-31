@@ -1,0 +1,13 @@
+{
+  "name": "quran-login",
+  "version": "1.0.0",
+  "description": "A simple login page for accessing a website related to the Quran",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}
+

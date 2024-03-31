@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodejs-app-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodejs-app-anan
+  template:
+    metadata:
+      labels:
+        app: nodejs-app-anan
+    spec:
+      containers:
+      - name: nodejs-app
+        image: 784699301512.dkr.ecr.us-east-1.amazonaws.com/anan-repo:1.5
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+
