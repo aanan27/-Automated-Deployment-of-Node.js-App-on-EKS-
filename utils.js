@@ -1,12 +1,15 @@
-// Function to generate an array of Surah
-function generateSurahList() {
-  return [
-    { number: 1, arabic: 'الفاتحة', transliteration: 'Al Fatiha', english: 'Al-Fatihah' },
-    { number: 2, arabic: 'البقرة', transliteration: 'Al Baqarah', english: 'Al-Baqarah' },
-    { number: 3, arabic: 'آل عمران', transliteration: 'Al Imran', english: 'Al-Imran' },
-    { number: 4, arabic: 'النساء', transliteration: 'An Nisa', english: 'An-Nisa' },
-    // Add more Surah objects as needed
-  ];
+// Util functions for authentication
+const users = [
+    { username: 'user1', password: 'password1' },
+    { username: 'user2', password: 'password2' },
+    // Add more users as needed
+];
+
+// Function to authenticate user
+function authenticate(username, password) {
+    const user = users.find(user => user.username === username && user.password === password);
+    return user ? true : false;
 }
 
-module.exports = { generateSurahList };
+module.exports = { authenticate };
+
