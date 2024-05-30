@@ -1,0 +1,117 @@
+pipeline {
+    agent any
+    
+    environment {
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key-id')
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+        AWS_REGION = 'us-east-1'
+        REGISTRY = ''
+        REPOSITORY = 'anan-repo'
+        IMAGE_TAG = '1.5'
+    }
+    
+    stages {
+        stage('Checkout Code') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Setup Terraform') {
+            steps {
+                sh 'curl -o terraform.zip https://releases.hashicorp.com/terraform/0.15.0/terraform_0.15.0_linux_amd64.zip'
+                sh 'unzip terraform.zip'
+                sh 'mv terraform /usr/local/bin/'
+                sh 'terraform --version'
+            }
+        }
+        
+        stage('Initialize Terraform') {
+            steps {
+                sh 'terraform init'
+            }
+        }
+        
+        stage('Terraform Plan') {
+            steps {
+                sh 'terraform plan -out=tfplan -lock=false'
+            }
+        }
+        
+        stage('Terraform Apply') {
+            when {
+                branch 'main'
+            }
+            steps {
+                sh 'terraform apply -auto-approve tfplan'
+            }
+        }
+        
+        stage('Terraform Show') {
+            steps {
+                sh 'terraform show'
+            }
+        }
+        
+        stage('Install kubectl') {
+            steps {
+                sh 'curl -LO "https://dl.k8s.io/release/v1.24.0/bin/linux/amd64/kubectl"'
+                sh 'chmod +x kubectl'
+                sh 'mv kubectl /usr/local/bin/'
+                sh 'kubectl version --client'
+            }
+        }
+        
+        stage('Configure AWS Credentials') {
+            steps {
+                withCredentials([string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'), string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    sh 'aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID'
+                    sh 'aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY'
+                    sh 'aws configure set region $AWS_REGION'
+                }
+            }
+        }
+        
+        stage('Login to Amazon ECR') {
+            steps {
+                script {
+                    REGISTRY = sh(script: 'aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com', returnStdout: true).trim()
+                }
+            }
+        }
+        
+        stage('Build, Tag, and Push Docker Image') {
+            steps {
+                sh '''
+                docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+                docker tag $REGISTRY/$REPOSITORY:$IMAGE_TAG $REGISTRY/$REPOSITORY:$IMAGE_TAG
+                docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+                '''
+            }
+        }
+        
+        stage('Update kubeconfig') {
+            steps {
+                sh 'aws eks update-kubeconfig --name anan-eks'
+            }
+        }
+        
+        stage('Deploy to EKS') {
+            steps {
+                sh '''
+                kubectl apply -f k8s_deployment.yml
+                kubectl apply -f k8s_services.yml
+                '''
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo 'Deployment successful!'
+        }
+        failure {
+            echo 'Deployment failed!'
+        }
+    }
+}
